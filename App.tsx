@@ -2,7 +2,7 @@ import React from 'react';
 import '@radix-ui/themes/styles.css';
 import { Theme } from '@radix-ui/themes';
 import { ToastContainer } from 'react-toastify';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
 import Home from './src/pages/Home';
 import AccessPage from './src/pages/AccessPage';
@@ -14,7 +14,7 @@ const App: React.FC = () => {
   return (
     <Theme appearance="inherit" radius="large" scaling="100%">
       <div className="min-h-screen font-sans bg-slate-950">
-        <HashRouter>
+        <BrowserRouter>
           <Routes>
             <Route element={<Home />}>
               <Route path="/" element={<AccessPage />} />
@@ -24,7 +24,7 @@ const App: React.FC = () => {
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </HashRouter>
+        </BrowserRouter>
         <ToastContainer
           position="top-right"
           autoClose={3000}

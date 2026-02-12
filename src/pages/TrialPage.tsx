@@ -74,14 +74,8 @@ const TrialPage: React.FC = () => {
       <MatrixBackground />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 flex flex-col h-screen">
-        {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl sm:text-4xl font-bold text-emerald-400 mb-2 font-mono">
-            > MATRIX MODE
-          </h1>
-          <p className="text-emerald-300 text-sm font-mono">
-            Free Trial AI Interface | Queries Remaining: {remainingQueries}/{maxQueries}
-          </p>
+          <p className="text-emerald-300 text-sm font-mono">Demo Mode Interface</p>
         </div>
 
         {/* Usage Bar */}
@@ -130,7 +124,7 @@ const TrialPage: React.FC = () => {
                 <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-400 text-sm font-mono">
-                      > Processing...
+                      &gt; Processing...
                     </span>
                     <span className="inline-block w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
                   </div>

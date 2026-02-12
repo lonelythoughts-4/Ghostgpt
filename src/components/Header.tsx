@@ -1,122 +1,52 @@
-import React, { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import React from 'react';
+import { Moon, Sun, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTheme } from '../lib/theme';
 
-interface HeaderProps {
-  currentPage: string;
-}
+type HeaderProps = {
+  variant?: 'light' | 'dark';
+};
 
-const Header: React.FC<HeaderProps> = ({ currentPage }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const Header = ({ variant }: HeaderProps) => {
+  const { theme, toggle } = useTheme();
+  const resolvedVariant = variant ?? theme;
+  const isDark = resolvedVariant === 'dark';
 
-  const getPageTitle = () => {
-    switch (currentPage) {
-      case 'access':
-        return 'Access & Payment';
-      case 'support':
-        return 'Support';
-      case 'trial':
-        return 'Free Trial';
-      default:
-        return 'GhostGPT';
-    }
-  };
+  const headerClass = isDark
+    ? 'bg-[#05070d]/90 border-b border-slate-800/70 text-slate-100'
+    : 'bg-white border-b border-amber-200 text-slate-900';
 
   return (
-    <header className="sticky top-0 z-50 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-900/80 border-b border-emerald-500/20 backdrop-blur-sm">
+    <header className={`${headerClass} sticky top-0 z-50 backdrop-blur`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-slate-900 font-bold text-sm">G</span>
-            </div>
-            <span className="text-emerald-400 font-bold text-lg hidden sm:inline">GhostGPT</span>
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center">
+              <span className={`rogue-logo ${isDark ? 'rogue-logo-dark' : 'rogue-logo-light'}`}>
+                ROGUE
+              </span>
+            </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link
-              to="/"
-              className={`text-sm font-medium transition-colors ${
-                currentPage === 'access'
-                  ? 'text-emerald-400'
-                  : 'text-slate-300 hover:text-emerald-400'
+          <div className="flex items-center space-x-3">
+            <div className={`hidden md:flex items-center space-x-2 text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              <User className="h-4 w-4" />
+              <span>Welcome back</span>
+            </div>
+            <button
+              type="button"
+              onClick={toggle}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.25em] transition ${
+                isDark
+                  ? 'border-slate-700 bg-slate-900/60 text-slate-200 hover:text-white'
+                  : 'border-amber-200 bg-amber-50 text-amber-700 hover:text-amber-900'
               }`}
             >
-              Access
-            </Link>
-            <Link
-              to="/support"
-              className={`text-sm font-medium transition-colors ${
-                currentPage === 'support'
-                  ? 'text-emerald-400'
-                  : 'text-slate-300 hover:text-emerald-400'
-              }`}
-            >
-              Support
-            </Link>
-            <Link
-              to="/trial"
-              className={`text-sm font-medium transition-colors ${
-                currentPage === 'trial'
-                  ? 'text-emerald-400'
-                  : 'text-slate-300 hover:text-emerald-400'
-              }`}
-            >
-              Free Trial
-            </Link>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors"
-            aria-label="Toggle menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+              {theme === 'dark' ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+              {theme === 'dark' ? 'Light' : 'Dark'}
+            </button>
+          </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden pb-4 border-t border-emerald-500/20 pt-4 space-y-2">
-            <Link
-              to="/"
-              className={`block px-4 py-2 rounded-lg transition-colors ${
-                currentPage === 'access'
-                  ? 'text-emerald-400'
-                  : 'text-slate-300 hover:text-emerald-400'
-              } hover:bg-slate-800`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Access
-            </Link>
-            <Link
-              to="/support"
-              className={`block px-4 py-2 rounded-lg transition-colors ${
-                currentPage === 'support'
-                  ? 'text-emerald-400'
-                  : 'text-slate-300 hover:text-emerald-400'
-              } hover:bg-slate-800`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Support
-            </Link>
-            <Link
-              to="/trial"
-              className={`block px-4 py-2 rounded-lg transition-colors ${
-                currentPage === 'trial'
-                  ? 'text-emerald-400'
-                  : 'text-slate-300 hover:text-emerald-400'
-              } hover:bg-slate-800`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Free Trial
-            </Link>
-          </nav>
-        )}
       </div>
     </header>
   );

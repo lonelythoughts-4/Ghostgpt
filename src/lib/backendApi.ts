@@ -35,8 +35,17 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set('x-telegram-init-data', initData);
   }
 
-  const res = await fetch(url, { ...init, headers });
-  return readJsonOrThrow<T>(res);
+  try {
+    const res = await fetch(url, { ...init, headers });
+    return readJsonOrThrow<T>(res);
+  } catch (err) {
+    // Browsers typically throw TypeError("Failed to fetch") when the backend is down
+    // or the request is blocked by CORS/preflight.
+    if (err instanceof TypeError) {
+      throw new Error(`Network error calling backend (${url}). Check the tunnel URL and backend CORS allowlist.`);
+    }
+    throw err;
+  }
 }
 
 export const backendApi = {

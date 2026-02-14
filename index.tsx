@@ -43,6 +43,14 @@ window.onunhandledrejection = function (event) {
   };
 });
 
+// Telegram WebApp integration (no-op in normal browsers).
+try {
+  (window as any).Telegram?.WebApp?.ready?.();
+  (window as any).Telegram?.WebApp?.expand?.();
+} catch {
+  // Ignore (non-Telegram environments or SDK not loaded yet).
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

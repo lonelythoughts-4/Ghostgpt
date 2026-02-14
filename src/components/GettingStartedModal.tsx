@@ -34,26 +34,25 @@ const GettingStartedModal: React.FC<GettingStartedModalProps> = ({
             <div className="flex gap-3">
               <span className="text-emerald-400 font-bold">1.</span>
               <p className="text-slate-300 text-sm">
-                Submit your transaction ID and email via verification
+                Choose a payment method and we will generate a deposit address
               </p>
             </div>
             <div className="flex gap-3">
               <span className="text-emerald-400 font-bold">2.</span>
               <p className="text-slate-300 text-sm">
-                Monthly renewal of $20 is required to maintain access
+                Send the exact amount shown in the payment modal
               </p>
             </div>
             <div className="flex gap-3">
               <span className="text-emerald-400 font-bold">3.</span>
               <p className="text-slate-300 text-sm">
-                If renewal is not completed, access will be terminated
+                Auto verification checks multiple public RPC endpoints in parallel
               </p>
             </div>
             <div className="flex gap-3">
               <span className="text-emerald-400 font-bold">4.</span>
               <p className="text-slate-300 text-sm">
-                A unique username and password will be auto-generated and sent
-                after verification
+                Once payment is detected, you will be granted access
               </p>
             </div>
           </div>

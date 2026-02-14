@@ -28,7 +28,8 @@ const EmailVerificationForm: React.FC<EmailVerificationFormProps> = ({
     resolver: zodResolver(emailSchema),
   });
 
-  const onSubmit = async (data: EmailFormData) => {
+  const onSubmit = async (_data: EmailFormData) => {
+    void _data;
     setIsSubmitting(true);
     try {
       // Simulate API call to backend
@@ -38,7 +39,7 @@ const EmailVerificationForm: React.FC<EmailVerificationFormProps> = ({
       setIsSuccess(true);
       toast.success('Email submitted successfully!');
       setTimeout(() => onSuccess(), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Failed to submit email. Please try again.');
     } finally {
       setIsSubmitting(false);

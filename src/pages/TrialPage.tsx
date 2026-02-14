@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Zap, Lock } from 'lucide-react';
+import { Send, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MatrixBackground from '../components/MatrixBackground';
 import { toast } from 'react-toastify';

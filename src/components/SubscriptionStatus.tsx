@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface SubscriptionStatusProps {
   status: 'active' | 'expiring_soon' | 'expired';

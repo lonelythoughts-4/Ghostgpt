@@ -9,19 +9,6 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ currentPage }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const getPageTitle = () => {
-    switch (currentPage) {
-      case 'access':
-        return 'Access & Payment';
-      case 'support':
-        return 'Support';
-      case 'trial':
-        return 'Free Trial';
-      default:
-        return 'GhostGPT';
-    }
-  };
-
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-900/80 border-b border-emerald-500/20 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

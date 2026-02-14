@@ -3,6 +3,12 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      stream: 'stream-browserify',
+      events: 'events',
+    },
+  },
   esbuild: {
     logOverride: {
       'ignored-directive': 'silent', 

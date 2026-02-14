@@ -1,10 +1,9 @@
 import type { AppSettings, PaymentMethod, PublicSession, VerificationResult, ChainEnv } from './payments';
 import { getTelegramInitData } from './telegramWebApp';
+import { API_BASE_URL } from '../appConfig';
 
 function getApiBaseUrl(): string {
-  const base = (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-    ?.VITE_API_BASE_URL;
-  return (base ?? '').trim().replace(/\/+$/, '');
+  return API_BASE_URL.trim().replace(/\/+$/, '');
 }
 
 async function readJsonOrThrow<T>(res: Response): Promise<T> {
@@ -65,4 +64,3 @@ export const backendApi = {
     });
   },
 };
-

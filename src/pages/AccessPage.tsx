@@ -11,6 +11,7 @@ import SubscriptionStatus from '../components/SubscriptionStatus';
 import type { AppSettings, PaymentMethod, PublicSession, ChainEnv } from '../lib/payments';
 import { backendApi } from '../lib/backendApi';
 import { getTelegramUserId } from '../lib/telegramWebApp';
+import { ADMIN_TELEGRAM_ID } from '../appConfig';
 
 type Step = 'getting-started' | 'payment-method' | 'transaction' | 'email' | 'complete';
 
@@ -96,15 +97,12 @@ const AccessPage: React.FC = () => {
     setStep('complete');
   };
 
-  const adminTelegramIdRaw = (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-    ?.VITE_ADMIN_TELEGRAM_ID;
-  const adminTelegramId = adminTelegramIdRaw ? Number(adminTelegramIdRaw) : null;
   const telegramUserId = getTelegramUserId();
   const isAdmin =
-    typeof adminTelegramId === 'number' &&
-    Number.isFinite(adminTelegramId) &&
+    typeof ADMIN_TELEGRAM_ID === 'number' &&
+    Number.isFinite(ADMIN_TELEGRAM_ID) &&
     typeof telegramUserId === 'number' &&
-    telegramUserId === adminTelegramId;
+    telegramUserId === ADMIN_TELEGRAM_ID;
 
   const handleSaveChainEnv = async (nextEnv: ChainEnv) => {
     setIsSavingSettings(true);

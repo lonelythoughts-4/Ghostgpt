@@ -9,9 +9,10 @@ export type ChatReply = {
   model: string;
   trial?: {
     isAdmin: boolean;
-    limitWords: number | null;
-    usedWords: number;
-    remainingWords: number | null;
+    trialsUsed: number;
+    trialsLimit: number | null;
+    maxWords: number | null;
+    responseWords: number;
   };
 };
 

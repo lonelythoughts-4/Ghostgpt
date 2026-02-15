@@ -25,8 +25,10 @@ const TrialPage: React.FC = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [usedWords, setUsedWords] = useState(0);
-  const [limitWords, setLimitWords] = useState<number | null>(500);
+  const [trialsUsed, setTrialsUsed] = useState(0);
+  const [trialsLimit, setTrialsLimit] = useState<number | null>(1);
+  const [maxWords, setMaxWords] = useState<number | null>(500);
+  const [lastResponseWords, setLastResponseWords] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -40,9 +42,10 @@ const TrialPage: React.FC = () => {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
-    const remainingWords = typeof limitWords === 'number' ? Math.max(0, limitWords - usedWords) : null;
-    if (typeof remainingWords === 'number' && remainingWords <= 0) {
-      toast.warning('Free trial word limit reached. Upgrade to continue.');
+    const remainingTrials =
+      typeof trialsLimit === 'number' ? Math.max(0, trialsLimit - trialsUsed) : null;
+    if (!isAdmin && typeof remainingTrials === 'number' && remainingTrials <= 0) {
+      toast.warning('Free trial already used. Upgrade to continue.');
       return;
     }
 
@@ -81,10 +84,17 @@ const TrialPage: React.FC = () => {
       setMessages((prev) => [...prev, aiMessage]);
 
       if (reply.trial) {
-        setUsedWords(reply.trial.usedWords);
-        setLimitWords(reply.trial.limitWords);
-        if (typeof reply.trial.remainingWords === 'number' && reply.trial.remainingWords <= 0) {
-          toast.warning('Free trial word limit reached. Upgrade to continue.');
+        setTrialsUsed(reply.trial.trialsUsed);
+        setTrialsLimit(reply.trial.trialsLimit);
+        setMaxWords(reply.trial.maxWords);
+        setLastResponseWords(reply.trial.responseWords);
+
+        if (
+          !reply.trial.isAdmin &&
+          typeof reply.trial.trialsLimit === 'number' &&
+          reply.trial.trialsUsed >= reply.trial.trialsLimit
+        ) {
+          toast.warning('Trial used. Upgrade to continue.');
         }
       }
     } catch (error) {
@@ -104,8 +114,8 @@ const TrialPage: React.FC = () => {
     }
   };
 
-  const remainingWords =
-    typeof limitWords === 'number' ? Math.max(0, limitWords - usedWords) : null;
+  const remainingTrials =
+    typeof trialsLimit === 'number' ? Math.max(0, trialsLimit - trialsUsed) : null;
 
   const telegramUserId = getTelegramUserId();
   const isAdmin =
@@ -126,9 +136,9 @@ const TrialPage: React.FC = () => {
         {/* Usage Bar */}
         <div className="mb-6 bg-slate-900/50 border border-emerald-500/30 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-emerald-400 text-sm font-mono">USAGE</span>
+            <span className="text-emerald-400 text-sm font-mono">TRIAL</span>
             <span className="text-emerald-400 text-sm font-mono">
-              {limitWords === null ? 'ADMIN' : `${usedWords}/${limitWords} words`}
+              {isAdmin || trialsLimit === null ? 'ADMIN' : `${trialsUsed}/${trialsLimit}`}
             </span>
           </div>
           <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
@@ -136,12 +146,18 @@ const TrialPage: React.FC = () => {
               className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all duration-300"
               style={{
                 width:
-                  limitWords === null || limitWords <= 0
+                  isAdmin || trialsLimit === null || trialsLimit <= 0
                     ? '100%'
-                    : `${Math.min(100, (usedWords / limitWords) * 100)}%`,
+                    : `${Math.min(100, (trialsUsed / trialsLimit) * 100)}%`,
               }}
             ></div>
           </div>
+          {!isAdmin && maxWords !== null && (
+            <p className="text-slate-400 text-xs mt-2 font-mono">
+              Max response length: {maxWords} words
+              {lastResponseWords > 0 ? ` (last: ${lastResponseWords})` : ''}
+            </p>
+          )}
         </div>
 
         {/* Chat Container */}
@@ -186,15 +202,15 @@ const TrialPage: React.FC = () => {
         </div>
 
         {/* Upgrade CTA */}
-        {!isAdmin && typeof remainingWords === 'number' && remainingWords <= 120 && (
+        {!isAdmin && typeof remainingTrials === 'number' && remainingTrials <= 0 && (
           <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-start gap-3">
             <Lock className="text-amber-400 flex-shrink-0 mt-1" size={20} />
             <div>
               <p className="text-amber-400 font-semibold text-sm mb-2">
-                Free Trial Limit Approaching
+                Free Trial Used
               </p>
               <p className="text-amber-300 text-sm mb-3">
-                You have {remainingWords} words remaining. Upgrade to GhostGPT Premium for unlimited access.
+                Your free trial has been used. Upgrade to GhostGPT Premium for unlimited access.
               </p>
               <Link
                 to="/"
@@ -221,14 +237,14 @@ const TrialPage: React.FC = () => {
               }}
               placeholder="> Ask me anything..."
               className="flex-1 bg-slate-900/50 border border-emerald-500/20 rounded-lg px-4 py-2 text-emerald-400 placeholder-emerald-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors font-mono text-sm"
-              disabled={isLoading || (!isAdmin && typeof remainingWords === 'number' && remainingWords <= 0)}
+              disabled={isLoading || (!isAdmin && typeof remainingTrials === 'number' && remainingTrials <= 0)}
             />
             <button
               onClick={handleSendMessage}
               disabled={
                 !inputValue.trim() ||
                 isLoading ||
-                (!isAdmin && typeof remainingWords === 'number' && remainingWords <= 0)
+                (!isAdmin && typeof remainingTrials === 'number' && remainingTrials <= 0)
               }
               className="flex-shrink-0 p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-slate-900 disabled:text-slate-400 rounded-lg transition-colors"
               aria-label="Send message"
@@ -237,11 +253,11 @@ const TrialPage: React.FC = () => {
             </button>
           </div>
           <p className="text-emerald-700 text-xs mt-2 font-mono">
-            {!isAdmin && typeof remainingWords === 'number' && remainingWords <= 0
-              ? '> LIMIT REACHED - UPGRADE TO CONTINUE'
-              : limitWords === null
+            {!isAdmin && typeof remainingTrials === 'number' && remainingTrials <= 0
+              ? '> TRIAL USED - UPGRADE TO CONTINUE'
+              : isAdmin || trialsLimit === null
                 ? '> ADMIN MODE'
-                : `> ${remainingWords} words remaining`}
+                : `> ${remainingTrials} trial remaining`}
           </p>
         </div>
       </div>

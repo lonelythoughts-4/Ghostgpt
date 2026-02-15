@@ -60,12 +60,10 @@ const ETH_RPCS = [
   'https://cloudflare-eth.com',
   'https://eth.llamarpc.com',
   'https://ethereum-rpc.publicnode.com',
-  'https://rpc.ankr.com/eth',
 ];
 
 const SOLANA_RPCS = [
   'https://api.mainnet-beta.solana.com',
-  'https://rpc.ankr.com/solana',
   'https://solana-api.projectserum.com',
   'https://solana-mainnet.core.chainstack.com',
 ];

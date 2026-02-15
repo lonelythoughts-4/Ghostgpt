@@ -47,5 +47,5 @@ export interface VerificationResult {
   checkedAt: string;
   endpointChecks: EndpointCheck[];
   message: string;
+  txId?: string;
 }
-

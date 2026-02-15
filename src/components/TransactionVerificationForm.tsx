@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, Loader2, RefreshCw, XCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import type { PublicSession, VerificationResult } from '../lib/payments';
@@ -13,6 +13,25 @@ type VerificationStatus = 'idle' | 'checking' | 'waiting' | 'verified' | 'failed
 
 const POLL_INTERVAL_MS = 12000;
 
+function formatAmount(value: number): string {
+  if (!Number.isFinite(value)) return String(value);
+  const abs = Math.abs(value);
+  if (abs === 0) return '0';
+  if (abs >= 100) return value.toFixed(2);
+  if (abs >= 1) return value.toFixed(4);
+  return value.toFixed(6);
+}
+
+function pickWorkingBalance(result: VerificationResult | null): number | null {
+  if (!result) return null;
+  const working = result.endpointChecks.find((entry) => !entry.error && typeof entry.balance === 'number');
+  return typeof working?.balance === 'number' ? working.balance : null;
+}
+
+const GlitchBurst: React.FC<{ mode: 'scan' | 'hit' }> = ({ mode }) => {
+  return <div className={`gg-glitch-burst gg-glitch-burst--${mode}`} aria-hidden="true" />;
+};
+
 const TransactionVerificationForm: React.FC<TransactionVerificationFormProps> = ({
   paymentSession,
   onVerified,
@@ -21,16 +40,25 @@ const TransactionVerificationForm: React.FC<TransactionVerificationFormProps> = 
   const [attempts, setAttempts] = useState(0);
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [glitch, setGlitch] = useState<{ key: number; mode: 'scan' | 'hit' } | null>(null);
   const inFlightRef = useRef(false);
   const completedRef = useRef(false);
+  const glitchTimerRef = useRef<number | null>(null);
 
   const runVerification = useCallback(async () => {
     if (inFlightRef.current || completedRef.current) return;
+
+    if (glitchTimerRef.current) {
+      window.clearTimeout(glitchTimerRef.current);
+      glitchTimerRef.current = null;
+    }
 
     inFlightRef.current = true;
     setIsChecking(true);
     setStatus((prev) => (prev === 'verified' ? prev : 'checking'));
     setAttempts((prev) => prev + 1);
+    setGlitch((prev) => ({ key: (prev?.key ?? 0) + 1, mode: 'scan' }));
+    glitchTimerRef.current = window.setTimeout(() => setGlitch(null), 380);
 
     try {
       const nextResult = await backendApi.verifySession(paymentSession.id);
@@ -39,8 +67,13 @@ const TransactionVerificationForm: React.FC<TransactionVerificationFormProps> = 
       if (nextResult.verified) {
         completedRef.current = true;
         setStatus('verified');
-        toast.success('Payment detected. Proceeding...');
-        window.setTimeout(() => onVerified(), 1000);
+        toast.success('Payment detected.');
+        setGlitch((prev) => ({ key: (prev?.key ?? 0) + 1, mode: 'hit' }));
+        if (glitchTimerRef.current) {
+          window.clearTimeout(glitchTimerRef.current);
+          glitchTimerRef.current = null;
+        }
+        glitchTimerRef.current = window.setTimeout(() => setGlitch(null), 900);
         return;
       }
 
@@ -79,14 +112,31 @@ const TransactionVerificationForm: React.FC<TransactionVerificationFormProps> = 
       void runVerification();
     }, POLL_INTERVAL_MS);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      if (glitchTimerRef.current) {
+        window.clearTimeout(glitchTimerRef.current);
+        glitchTimerRef.current = null;
+      }
+    };
   }, [runVerification, paymentSession.id]);
 
+  const workingBalance = useMemo(() => pickWorkingBalance(result), [result]);
+  const statusMessage = useMemo(() => {
+    if (status === 'verified') return 'Payment detected.';
+    if (status === 'failed') return result?.message ?? 'Could not verify payment.';
+    if (workingBalance !== null) {
+      return `Balance: ${formatAmount(workingBalance)} ${paymentSession.symbol}. Waiting for >= ${paymentSession.expectedAmount} ${paymentSession.symbol}.`;
+    }
+    return result?.message ?? 'Waiting for payment...';
+  }, [paymentSession.expectedAmount, paymentSession.symbol, result?.message, status, workingBalance]);
+
   return (
-    <div className="bg-gradient-to-b from-slate-800 to-slate-900 border border-emerald-500/30 rounded-lg p-6">
+    <div className="bg-gradient-to-b from-slate-800 to-slate-900 border border-emerald-500/30 rounded-lg p-6 relative overflow-hidden">
+      {glitch && <GlitchBurst key={glitch.key} mode={glitch.mode} />}
       <h3 className="text-lg font-bold text-emerald-400 mb-3">Automatic Payment Verification</h3>
       <p className="text-slate-300 text-sm mb-2">
-        Checking {paymentSession.network} endpoints in parallel for address{' '}
+        Checking {paymentSession.network} in parallel for address{' '}
         <span className="font-mono text-emerald-300">{paymentSession.address}</span>.
       </p>
       {paymentSession.fallbackAddress && (
@@ -104,6 +154,11 @@ const TransactionVerificationForm: React.FC<TransactionVerificationFormProps> = 
             <p className="text-emerald-300 text-sm">
               Payment detected for {paymentSession.expectedAmount} {paymentSession.symbol}.
             </p>
+            {result?.txId && (
+              <p className="text-emerald-200 text-xs mt-2 break-all">
+                Txn ID: <span className="font-mono">{result.txId}</span>
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -113,9 +168,7 @@ const TransactionVerificationForm: React.FC<TransactionVerificationFormProps> = 
           <XCircle className="text-red-400" size={24} />
           <div>
             <p className="text-red-400 font-semibold">Verification Stopped</p>
-            <p className="text-red-300 text-sm">
-              {result?.message ?? 'Could not verify payment.'}
-            </p>
+            <p className="text-red-300 text-sm">{statusMessage}</p>
           </div>
         </div>
       )}
@@ -131,47 +184,30 @@ const TransactionVerificationForm: React.FC<TransactionVerificationFormProps> = 
               Poll attempt #{attempts}. Auto-check runs every {Math.floor(POLL_INTERVAL_MS / 1000)}
               s.
             </p>
+            <p className="text-slate-400 text-xs mt-2">{statusMessage}</p>
           </div>
         </div>
       )}
 
-      {result && (
-        <div className="space-y-2 mb-5">
-          <p className="text-slate-300 text-sm font-semibold">Fallback endpoint results</p>
-          {result.endpointChecks.length === 0 && (
-            <p className="text-slate-400 text-sm">No endpoint checks available.</p>
-          )}
-          {result.endpointChecks.map((entry) => (
-            <div
-              key={`${entry.endpoint}-${entry.error ?? entry.balance ?? 'ok'}`}
-              className={`p-3 border rounded-lg text-sm ${
-                entry.ok
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                  : 'bg-slate-900/50 border-slate-700 text-slate-300'
-              }`}
-            >
-              <p className="font-mono break-all">{entry.endpoint}</p>
-              <p className="text-xs mt-1">
-                {entry.ok
-                  ? `Balance detected: ${entry.balance ?? 0} ${paymentSession.symbol}`
-                  : entry.error ?? `Balance below ${paymentSession.expectedAmount} ${paymentSession.symbol}`}
-              </p>
-            </div>
-          ))}
-        </div>
+      {status === 'verified' ? (
+        <button
+          onClick={() => onVerified()}
+          className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-900 font-bold py-3 rounded-lg transition-all duration-200"
+        >
+          Continue
+        </button>
+      ) : (
+        <button
+          onClick={() => void runVerification()}
+          disabled={isChecking || status === 'failed'}
+          className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-slate-900 disabled:text-slate-400 font-bold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+        >
+          <RefreshCw size={18} className={isChecking ? 'animate-spin' : ''} />
+          Check Again
+        </button>
       )}
-
-      <button
-        onClick={() => void runVerification()}
-        disabled={isChecking || status === 'verified' || status === 'failed'}
-        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-slate-900 disabled:text-slate-400 font-bold py-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
-      >
-        <RefreshCw size={18} className={isChecking ? 'animate-spin' : ''} />
-        Check Again
-      </button>
     </div>
   );
 };
 
 export default TransactionVerificationForm;
-

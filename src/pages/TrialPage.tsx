@@ -3,6 +3,9 @@ import { Send, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MatrixBackground from '../components/MatrixBackground';
 import { toast } from 'react-toastify';
+import { backendApi, type ChatMessage } from '../lib/backendApi';
+import { getTelegramUserId } from '../lib/telegramWebApp';
+import { ADMIN_TELEGRAM_ID } from '../appConfig';
 
 interface TrialMessage {
   id: string;
@@ -22,8 +25,8 @@ const TrialPage: React.FC = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [queriesUsed, setQueriesUsed] = useState(2);
-  const maxQueries = 5;
+  const [usedWords, setUsedWords] = useState(0);
+  const [limitWords, setLimitWords] = useState<number | null>(500);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -37,8 +40,9 @@ const TrialPage: React.FC = () => {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
-    if (queriesUsed >= maxQueries) {
-      toast.warning('Free trial limit reached. Upgrade to continue.');
+    const remainingWords = typeof limitWords === 'number' ? Math.max(0, limitWords - usedWords) : null;
+    if (typeof remainingWords === 'number' && remainingWords <= 0) {
+      toast.warning('Free trial word limit reached. Upgrade to continue.');
       return;
     }
 
@@ -52,22 +56,63 @@ const TrialPage: React.FC = () => {
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
-    setQueriesUsed((prev) => prev + 1);
 
-    // Simulate AI response with typing animation
-    setTimeout(() => {
+    try {
+      const systemPrompt =
+        'You are GhostGPT. Be helpful, concise, and honest about uncertainty. Use clear formatting when useful.';
+
+      // Send a short window of history for context.
+      const historyWindow = messages.slice(-12);
+      const chatMessages: ChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        ...historyWindow
+          .filter((m) => m.sender === 'user' || m.sender === 'ai')
+          .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content })),
+        { role: 'user', content: userMessage.content },
+      ];
+
+      const reply = await backendApi.chat(chatMessages);
       const aiMessage: TrialMessage = {
         id: (Date.now() + 1).toString(),
-        content: 'This is a simulated response from the AI. In production, this would be connected to your AI model API. Your question was: "' + userMessage.content + '"',
+        content: reply.content,
         sender: 'ai',
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+
+      if (reply.trial) {
+        setUsedWords(reply.trial.usedWords);
+        setLimitWords(reply.trial.limitWords);
+        if (typeof reply.trial.remainingWords === 'number' && reply.trial.remainingWords <= 0) {
+          toast.warning('Free trial word limit reached. Upgrade to continue.');
+        }
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to reach chatbot.';
+      toast.error(msg);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}_err`,
+          content: msg,
+          sender: 'ai',
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  const remainingQueries = maxQueries - queriesUsed;
+  const remainingWords =
+    typeof limitWords === 'number' ? Math.max(0, limitWords - usedWords) : null;
+
+  const telegramUserId = getTelegramUserId();
+  const isAdmin =
+    typeof ADMIN_TELEGRAM_ID === 'number' &&
+    Number.isFinite(ADMIN_TELEGRAM_ID) &&
+    typeof telegramUserId === 'number' &&
+    telegramUserId === ADMIN_TELEGRAM_ID;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
@@ -83,13 +128,18 @@ const TrialPage: React.FC = () => {
           <div className="flex items-center justify-between mb-2">
             <span className="text-emerald-400 text-sm font-mono">USAGE</span>
             <span className="text-emerald-400 text-sm font-mono">
-              {queriesUsed}/{maxQueries}
+              {limitWords === null ? 'ADMIN' : `${usedWords}/${limitWords} words`}
             </span>
           </div>
           <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
             <div
               className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full transition-all duration-300"
-              style={{ width: `${(queriesUsed / maxQueries) * 100}%` }}
+              style={{
+                width:
+                  limitWords === null || limitWords <= 0
+                    ? '100%'
+                    : `${Math.min(100, (usedWords / limitWords) * 100)}%`,
+              }}
             ></div>
           </div>
         </div>
@@ -136,7 +186,7 @@ const TrialPage: React.FC = () => {
         </div>
 
         {/* Upgrade CTA */}
-        {remainingQueries <= 2 && (
+        {!isAdmin && typeof remainingWords === 'number' && remainingWords <= 120 && (
           <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-start gap-3">
             <Lock className="text-amber-400 flex-shrink-0 mt-1" size={20} />
             <div>
@@ -144,7 +194,7 @@ const TrialPage: React.FC = () => {
                 Free Trial Limit Approaching
               </p>
               <p className="text-amber-300 text-sm mb-3">
-                You have {remainingQueries} queries remaining. Upgrade to GhostGPT Premium for unlimited access.
+                You have {remainingWords} words remaining. Upgrade to GhostGPT Premium for unlimited access.
               </p>
               <Link
                 to="/"
@@ -171,11 +221,15 @@ const TrialPage: React.FC = () => {
               }}
               placeholder="> Ask me anything..."
               className="flex-1 bg-slate-900/50 border border-emerald-500/20 rounded-lg px-4 py-2 text-emerald-400 placeholder-emerald-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors font-mono text-sm"
-              disabled={isLoading || queriesUsed >= maxQueries}
+              disabled={isLoading || (!isAdmin && typeof remainingWords === 'number' && remainingWords <= 0)}
             />
             <button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading || queriesUsed >= maxQueries}
+              disabled={
+                !inputValue.trim() ||
+                isLoading ||
+                (!isAdmin && typeof remainingWords === 'number' && remainingWords <= 0)
+              }
               className="flex-shrink-0 p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 text-slate-900 disabled:text-slate-400 rounded-lg transition-colors"
               aria-label="Send message"
             >
@@ -183,9 +237,11 @@ const TrialPage: React.FC = () => {
             </button>
           </div>
           <p className="text-emerald-700 text-xs mt-2 font-mono">
-            {queriesUsed >= maxQueries
+            {!isAdmin && typeof remainingWords === 'number' && remainingWords <= 0
               ? '> LIMIT REACHED - UPGRADE TO CONTINUE'
-              : `> ${remainingQueries} queries remaining`}
+              : limitWords === null
+                ? '> ADMIN MODE'
+                : `> ${remainingWords} words remaining`}
           </p>
         </div>
       </div>

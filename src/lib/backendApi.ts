@@ -2,6 +2,19 @@ import type { AppSettings, PaymentMethod, PublicSession, VerificationResult, Cha
 import { getTelegramInitData } from './telegramWebApp';
 import { API_BASE_URL } from '../appConfig';
 
+export type ChatRole = 'system' | 'user' | 'assistant';
+export type ChatMessage = { role: ChatRole; content: string };
+export type ChatReply = {
+  content: string;
+  model: string;
+  trial?: {
+    isAdmin: boolean;
+    limitWords: number | null;
+    usedWords: number;
+    remainingWords: number | null;
+  };
+};
+
 function getApiBaseUrl(): string {
   return API_BASE_URL.trim().replace(/\/+$/, '');
 }
@@ -70,6 +83,13 @@ export const backendApi = {
     return apiFetch<AppSettings>('/admin/settings', {
       method: 'POST',
       body: JSON.stringify({ chainEnv }),
+    });
+  },
+
+  async chat(messages: ChatMessage[]): Promise<ChatReply> {
+    return apiFetch<ChatReply>('/api/v1/chat', {
+      method: 'POST',
+      body: JSON.stringify({ messages }),
     });
   },
 };

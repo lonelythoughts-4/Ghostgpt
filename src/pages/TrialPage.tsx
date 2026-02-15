@@ -66,13 +66,16 @@ const TrialPage: React.FC = () => {
 
       // Send a short window of history for context.
       const historyWindow = messages.slice(-12);
-      const chatMessages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt },
-        ...historyWindow
-          .filter((m) => m.sender === 'user' || m.sender === 'ai')
-          .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.content })),
-        { role: 'user', content: userMessage.content },
-      ];
+        const chatMessages: ChatMessage[] = [
+          { role: 'system', content: systemPrompt },
+          ...historyWindow
+            .filter((m) => m.sender === 'user' || m.sender === 'ai')
+            .map<ChatMessage>((m) => ({
+              role: m.sender === 'user' ? 'user' : 'assistant',
+              content: m.content,
+            })),
+          { role: 'user', content: userMessage.content },
+        ];
 
       const reply = await backendApi.chat(chatMessages);
       const aiMessage: TrialMessage = {
